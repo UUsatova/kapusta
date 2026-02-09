@@ -1,0 +1,25 @@
+:root {
+  --bg-grad-a: #f3f4f6;
+  --bg-grad-b: #e9edf3;
+  --card-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+body {
+  background: radial-gradient(circle at top right, var(--bg-grad-b), var(--bg-grad-a));
+}
+
+.card-soft {
+  border-radius: 16px;
+  border: 1px solid #dce2ea;
+  box-shadow: var(--card-shadow);
+}
+
+.btn,
+.form-control,
+.form-select {
+  border-radius: 10px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  border-radius: 8px !important;
+}

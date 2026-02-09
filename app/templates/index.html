@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-12 d-flex justify-content-end">
+    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#settings-modal">Настройки</button>
+  </div>
+  <div class="col-12">
+    <div class="card card-soft">
+      <div class="card-body">
+        <h3 class="card-title mb-3">Мини-калькулятор</h3>
+        <form id="calc-form"
+              hx-post="/actions/calc"
+              hx-target="#calc-result"
+              hx-trigger="keyup changed delay:300ms from:input">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label">Сумма</label>
+              <input name="calc_amount" class="form-control" value="500" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Процент годовых</label>
+              <input name="calc_rate" class="form-control" value="700" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Срок (дни)</label>
+              <input name="calc_period" class="form-control" value="30" />
+            </div>
+          </div>
+          <div id="calc-result" class="mt-3">
+            {% include "partials/calc_result.html" %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card card-soft">
+      <div class="card-body">
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-file" type="button">Из файла</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-api" type="button">Из API</button>
+          </li>
+        </ul>
+
+        <div class="tab-content pt-3">
+          <div class="tab-pane fade" id="tab-file">
+            <form hx-post="/actions/load-file" hx-target="#table-container" hx-indicator="#loading-indicator">
+              <div class="row g-2 align-items-end">
+                <div class="col-md-8">
+                  <label class="form-label">JSON file</label>
+                  <input class="form-control" name="json_path" value="{{ config.json_path }}" />
+                </div>
+                <div class="col-md-4 text-end">
+                  <button class="btn btn-success">Обновить</button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <div class="tab-pane fade show active" id="tab-api">
+            <form hx-post="/actions/load-api" hx-target="#table-container" hx-indicator="#loading-indicator">
+              <div class="row g-2">
+                <div class="col-md-12">
+                  <label class="form-label">Base URL</label>
+                  <input class="form-control" name="api_base_url" value="{{ config.api_base_url }}" />
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label">amount_min</label>
+                  <input class="form-control" name="amount_min" value="{{ api_params.amount_min }}" />
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label">amount_max</label>
+                  <input class="form-control" name="amount_max" value="{{ api_params.amount_max }}" />
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label">period_days_min</label>
+                  <input class="form-control" name="period_days_min" value="{{ api_params.period_days_min }}" />
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label">period_days_max</label>
+                  <input class="form-control" name="period_days_max" value="{{ api_params.period_days_max }}" />
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label">rating_min</label>
+                  <input class="form-control" name="rating_min" value="{{ api_params.rating_min }}" />
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                  <span class="text-muted small">Aliases и SSL задаются через кнопку \"Настройки\"</span>
+                </div>
+                <div class="col-md-6 d-flex justify-content-end align-items-end gap-2">
+                  <button class="btn btn-success">Загрузить обновить</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12" id="table-container">
+    {% include "partials/table_container.html" %}
+  </div>
+
+  <div class="col-12 text-muted small" id="loading-indicator" style="display:none;">Загрузка...</div>
+</div>
+
+<div class="modal fade" id="settings-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Настройки</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form hx-post="/actions/save-settings" hx-target="#status-line">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Aliases (column=Название,...)</label>
+            <input class="form-control" name="aliases" value="{{ config.aliases }}" />
+          </div>
+          <label class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="ignore_ssl" {% if config.ignore_ssl %}checked{% endif %}>
+            <span class="form-check-label">Ignore SSL</span>
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" type="submit" data-bs-dismiss="modal">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
