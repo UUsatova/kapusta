@@ -1,4 +1,5 @@
 from typing import Dict, Optional
+import time
 
 from app.domain.aliases import parse_aliases
 from app.domain.calculator import calculate_values
@@ -11,6 +12,8 @@ class ReportUseCases:
     def __init__(self, item_source: ItemSource, report_repository: ReportRepository):
         self.item_source = item_source
         self.report_repository = report_repository
+        self._stats_items_cache: Dict[tuple[str, bool], tuple[float, list[dict]]] = {}
+        self._stats_cache_ttl_sec = 300
 
     def calculate(self, amount_raw: str, rate_raw: str, period_raw: str) -> Dict[str, str]:
         return calculate_values(amount_raw, rate_raw, period_raw)
@@ -37,13 +40,28 @@ class ReportUseCases:
         ignore_ssl: bool,
         min_amount_count: Optional[int],
         max_amount_count: Optional[int],
+        min_rating: Optional[float],
     ) -> Dict[str, object]:
-        items = self.item_source.fetch_all_unfiltered(base_url, ignore_ssl)
+        items = self._get_cached_stats_items(base_url, ignore_ssl)
         return build_amount_stats(
             items,
             min_amount_count=min_amount_count,
             max_amount_count=max_amount_count,
+            min_rating=min_rating,
         )
+
+    def _get_cached_stats_items(self, base_url: str, ignore_ssl: bool) -> list[dict]:
+        cache_key = (base_url, ignore_ssl)
+        now = time.time()
+        cached = self._stats_items_cache.get(cache_key)
+        if cached:
+            ts, items = cached
+            if now - ts <= self._stats_cache_ttl_sec:
+                return items
+
+        items = self.item_source.fetch_all_unfiltered(base_url, ignore_ssl)
+        self._stats_items_cache[cache_key] = (now, items)
+        return items
 
     @staticmethod
     def _apply_aliases(report: Dict[str, object], aliases_raw: str) -> Dict[str, object]:

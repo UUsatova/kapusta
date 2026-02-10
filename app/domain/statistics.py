@@ -25,6 +25,16 @@ def _parse_period_days(item: dict) -> Optional[int]:
         return None
 
 
+def _parse_rating(item: dict) -> Optional[float]:
+    value = item.get("rating")
+    if value is None:
+        return None
+    try:
+        return float(str(value).strip())
+    except ValueError:
+        return None
+
+
 def _bucket_period_days(period_days: int) -> Union[int, str]:
     if period_days in PERIOD_BUCKETS:
         return period_days
@@ -49,6 +59,7 @@ def build_amount_stats(
     items: List[dict],
     min_amount_count: Optional[int] = None,
     max_amount_count: Optional[int] = None,
+    min_rating: Optional[float] = None,
 ) -> Dict[str, object]:
     amount_totals: Counter = Counter()
     amount_period_counts = defaultdict(Counter)
@@ -59,8 +70,12 @@ def build_amount_stats(
 
         amount = _parse_amount(item)
         period_days = _parse_period_days(item)
+        rating = _parse_rating(item)
         if amount is None or period_days is None:
             continue
+        if min_rating is not None:
+            if rating is None or rating <= min_rating:
+                continue
 
         bucket = _bucket_period_days(period_days)
         amount_totals[amount] += 1

@@ -171,13 +171,16 @@ def load_stats(
     request: Request,
     min_amount_count: str = Form(""),
     max_amount_count: str = Form(""),
+    min_rating: str = Form(""),
 ):
     cfg = load_app_config(_default_config())
     try:
         min_count = None
         max_count = None
+        min_rating_value = None
         raw_min = (min_amount_count or "").strip()
         raw_max = (max_amount_count or "").strip()
+        raw_rating = (min_rating or "").strip()
         if raw_min:
             min_count = int(raw_min)
             if min_count < 0:
@@ -186,11 +189,14 @@ def load_stats(
             max_count = int(raw_max)
             if max_count < 0:
                 max_count = 0
+        if raw_rating:
+            min_rating_value = float(raw_rating)
         state.stats = use_cases.build_amount_distribution(
             base_url=cfg.api_base_url,
             ignore_ssl=cfg.ignore_ssl,
             min_amount_count=min_count,
             max_amount_count=max_count,
+            min_rating=min_rating_value,
         )
         state.status = f"Статистика построена. Записей: {state.stats['total_records']}"
     except Exception as exc:
