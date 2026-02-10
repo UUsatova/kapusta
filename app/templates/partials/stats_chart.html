@@ -1,0 +1,17 @@
+<div class="card card-soft">
+  <div class="card-body">
+    <h4 class="card-title mb-3">Распределение по amount</h4>
+    {% if stats["labels"] and stats["datasets"] %}
+      <div class="chart-wrap">
+        <canvas id="amount-chart"></canvas>
+      </div>
+      <div class="text-muted small mt-2">Всего записей: {{ stats["total_records"] }}</div>
+      <script>
+        renderAmountStackedChart({{ stats["labels"]|tojson }}, {{ stats["datasets"]|tojson }});
+      </script>
+    {% else %}
+      <div class="text-muted">Нет данных для построения графика.</div>
+    {% endif %}
+  </div>
+</div>
+<div id="status-line" hx-swap-oob="true" class="mt-2 text-muted">{{ status }}</div>

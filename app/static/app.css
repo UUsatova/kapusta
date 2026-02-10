@@ -23,3 +23,8 @@ body {
 .dataTables_wrapper .dataTables_paginate .paginate_button {
   border-radius: 8px !important;
 }
+
+.chart-wrap {
+  position: relative;
+  height: 360px;
+}
