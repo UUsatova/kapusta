@@ -23,6 +23,7 @@ class ApiParams:
     period_days_min: str = "30"
     period_days_max: str = "30"
     rating_min: str = "45"
+    rating_max: str = "45"
 
     @classmethod
     def from_dict(cls, data: Dict[str, str]):

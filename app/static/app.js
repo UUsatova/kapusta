@@ -157,9 +157,28 @@ function renderAmountStackedChart(labels, datasets) {
   });
 }
 
+function initAmountChartFromPayload() {
+  const payloadEl = document.getElementById('amount-chart-payload');
+  if (!payloadEl) {
+    return;
+  }
+  try {
+    const payload = JSON.parse(payloadEl.textContent || '{}');
+    const labels = payload.labels || [];
+    const datasets = payload.datasets || [];
+    renderAmountStackedChart(labels, datasets);
+  } catch (err) {
+    console.error('Failed to parse amount chart payload:', err);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', initDataTable);
+document.addEventListener('DOMContentLoaded', initAmountChartFromPayload);
 document.body.addEventListener('htmx:afterSwap', function (evt) {
   if (evt.target.id === 'table-container') {
     initDataTable();
+  }
+  if (evt.target.id === 'stats-container') {
+    initAmountChartFromPayload();
   }
 });

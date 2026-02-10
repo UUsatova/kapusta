@@ -5,10 +5,10 @@
       <div class="chart-wrap">
         <canvas id="amount-chart"></canvas>
       </div>
-      <div class="text-muted small mt-2">Всего записей: {{ stats["total_records"] }}</div>
-      <script>
-        renderAmountStackedChart({{ stats["labels"]|tojson }}, {{ stats["datasets"]|tojson }});
+      <script id="amount-chart-payload" type="application/json">
+        {{ {"labels": stats["labels"], "datasets": stats["datasets"]}|tojson }}
       </script>
+      <div class="text-muted small mt-2">Всего записей: {{ stats["total_records"] }}</div>
     {% else %}
       <div class="text-muted">Нет данных для построения графика.</div>
     {% endif %}

@@ -30,6 +30,10 @@ state = AppState()
 use_cases = ReportUseCases(item_source=ItemSource(), report_repository=ReportRepository())
 
 
+def _empty_report() -> dict:
+    return {"columns": [], "headers": [], "rows": [], "rows_count": 0}
+
+
 def _default_config() -> AppConfig:
     return AppConfig(
         json_path=str(DATA_JSON_DEFAULT),
@@ -89,6 +93,7 @@ def load_file(
         state.report = use_cases.build_table_from_file(cfg.json_path, cfg.aliases)
         state.status = f"Строк: {state.report['rows_count']}"
     except Exception as exc:
+        state.report = _empty_report()
         state.status = f"Ошибка: {exc}"
 
     return templates.TemplateResponse(
@@ -110,6 +115,7 @@ def load_api(
     period_days_min: str = Form(""),
     period_days_max: str = Form(""),
     rating_min: str = Form(""),
+    rating_max: str = Form(""),
 ):
     cfg = load_app_config(_default_config())
     cfg.api_base_url = api_base_url or cfg.api_base_url
@@ -120,6 +126,7 @@ def load_api(
             "period_days_min": period_days_min,
             "period_days_max": period_days_max,
             "rating_min": rating_min,
+            "rating_max": rating_max,
         }
     )
     save_app_config(cfg)
@@ -131,8 +138,17 @@ def load_api(
             ignore_ssl=cfg.ignore_ssl,
             aliases_raw=cfg.aliases,
         )
-        state.status = f"Строк: {state.report['rows_count']}"
+        state.status = (
+            f"Строк: {state.report['rows_count']} | "
+            f"amount_min={cfg.api_params.amount_min}, "
+            f"amount_max={cfg.api_params.amount_max}, "
+            f"period_days_min={cfg.api_params.period_days_min}, "
+            f"period_days_max={cfg.api_params.period_days_max}, "
+            f"rating_min={cfg.api_params.rating_min}, "
+            f"rating_max={cfg.api_params.rating_max}"
+        )
     except Exception as exc:
+        state.report = _empty_report()
         state.status = f"Ошибка: {exc}"
 
     return templates.TemplateResponse(

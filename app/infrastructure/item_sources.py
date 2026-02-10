@@ -1,6 +1,8 @@
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 import math
+from urllib.error import HTTPError
+from urllib.parse import unquote, urlparse, urlunparse
 from typing import Dict, List
 
 from app.core.api import build_query_url, fetch_json
@@ -34,10 +36,11 @@ class ItemSource:
         all_items: List[dict] = []
         page_size = 100
 
+        normalized_base_url = self._normalize_base_url(base_url)
         params = dict(base_params)
         params["page"] = "1"
         params["page_size"] = str(page_size)
-        first_raw = fetch_json(build_query_url(base_url, params), verify_ssl=not ignore_ssl)
+        first_raw = self._fetch_json_with_retry(normalized_base_url, params, ignore_ssl)
         first_items = extract_items(first_raw)
         if not first_items:
             return []
@@ -46,7 +49,7 @@ class ItemSource:
         total_pages = self._extract_total_pages(first_raw, page_size)
 
         if total_pages and total_pages > 1:
-            all_items.extend(self._fetch_pages_parallel(base_url, base_params, ignore_ssl, page_size, total_pages))
+            all_items.extend(self._fetch_pages_parallel(normalized_base_url, base_params, ignore_ssl, page_size, total_pages))
             return all_items
 
         page = 2
@@ -54,8 +57,11 @@ class ItemSource:
             params = dict(base_params)
             params["page"] = str(page)
             params["page_size"] = str(page_size)
-            url = build_query_url(base_url, params)
-            raw = fetch_json(url, verify_ssl=not ignore_ssl)
+            try:
+                raw = self._fetch_json_with_retry(normalized_base_url, params, ignore_ssl)
+            except Exception:
+                # Keep already downloaded pages instead of failing whole request.
+                break
             items = extract_items(raw)
 
             if not items:
@@ -88,14 +94,20 @@ class ItemSource:
             params = dict(base_params)
             params["page"] = str(page)
             params["page_size"] = str(page_size)
-            url = build_query_url(base_url, params)
-            raw = fetch_json(url, verify_ssl=not ignore_ssl)
-            return extract_items(raw)
+            try:
+                raw = self._fetch_json_with_retry(base_url, params, ignore_ssl)
+                return extract_items(raw)
+            except Exception:
+                # Degrade gracefully: skip failed page and keep other pages.
+                return []
 
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
             futures = {pool.submit(fetch_page, page): page for page in pages}
             for future, page in futures.items():
-                page_results[page] = future.result()
+                try:
+                    page_results[page] = future.result()
+                except Exception:
+                    page_results[page] = []
 
         ordered_items: List[dict] = []
         for page in pages:
@@ -125,3 +137,36 @@ class ItemSource:
         if total_count is None:
             return None
         return max(1, math.ceil(total_count / page_size))
+
+    @staticmethod
+    def _normalize_base_url(base_url: str) -> str:
+        parsed = urlparse((base_url or "").strip())
+        path = parsed.path or ""
+        query = parsed.query or ""
+
+        decoded_path = unquote(path)
+        if not query:
+            if "?" in decoded_path:
+                decoded_path, query = decoded_path.split("?", 1)
+            elif "=" in decoded_path and "&" in decoded_path:
+                slash_idx = decoded_path.rfind("/")
+                if slash_idx >= 0:
+                    tail = decoded_path[slash_idx + 1 :]
+                    head = decoded_path[: slash_idx + 1]
+                    if "=" in tail:
+                        decoded_path = head
+                        query = tail
+
+        if decoded_path and not decoded_path.endswith("/"):
+            decoded_path = f"{decoded_path}/"
+
+        return urlunparse(parsed._replace(path=decoded_path, query=query, fragment=""))
+
+    def _fetch_json_with_retry(self, base_url: str, params: Dict[str, str], ignore_ssl: bool):
+        request_url = build_query_url(base_url, params)
+        try:
+            return fetch_json(request_url, verify_ssl=not ignore_ssl)
+        except HTTPError as exc:
+            if exc.code != 404:
+                raise
+            raise RuntimeError(f"HTTP 404 for URL: {request_url}") from exc

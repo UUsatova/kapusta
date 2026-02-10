@@ -1,12 +1,16 @@
 import json
 import ssl
-from urllib.parse import urlencode, urlparse, urlunparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
 def build_query_url(base_url: str, params: dict) -> str:
     parsed = urlparse(base_url)
-    query = urlencode({k: v for k, v in params.items() if v not in (None, "")})
+    query_params = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    for key, value in params.items():
+        if value not in (None, ""):
+            query_params[key] = value
+    query = urlencode(query_params)
     return urlunparse(parsed._replace(query=query))
 
 
